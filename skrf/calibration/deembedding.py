@@ -534,7 +534,38 @@ class Short(Deembedding):
 
         return caled
 
+class OpenOpenShortThru(Deembedding):
+    """
+    Remove Parasitics. See Paper On the De-Embedding Issue of Millimeter-Wave
+    and Sub-Millimeter-Wave Measurement
+    and Circuit Design
 
+    Suitable for higher frequencies where classic OpenShort Algorithms not feasible anymore.
+    MORE DETAILS FOLLOWING!
+    """
+    def __init__(self, dummy_open, dummy_open_pad, dummy_short, dummy_thru, name=None, *args, **kwargs):
+        """
+        Initializer info
+        """
+        self.open = dummy_open.copy()
+        self.open_pad = dummy_open_pad.copy()
+        self.short = dummy_short.copy()
+        self.thru = dummy_thru.copy()
+        dummies = [self.open, self.open_pad, self.short, self.thru]
+        Deembedding.__init__(self, dummies, name, *args, **kwargs)
+    
+    def deembed(self,ntwk):
+        """
+        Perform deembedding.
+        """
+        # check if the frequencies match with dummy frequencies
+        if ntwk.f != self.open.f:
+            warnings.warn('Network frequencies dont match dummy frequencies, attempting overlap.', RuntimeWarning)
+            caled, op, op_p, sh, thr = overlap_multi([ntwk, self.open, self.open_pad, self.short, self.thru])
+        else:
+            caled, op, op_p, sh, thr = ntwk.copy(), self.open, self.open_pad, self.short, self.thru
+
+        # Deembedding-Algo here
 class SplitPi(Deembedding):
     """
     Remove shunt and series parasitics assuming pi-type embedding network.

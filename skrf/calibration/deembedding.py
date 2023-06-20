@@ -556,7 +556,20 @@ class OpenOpenShortThru(Deembedding):
     
     def deembed(self,ntwk):
         """
-        Perform deembedding.
+        Perform the de-embedding calculation
+
+        Parameters
+        ----------
+
+        ntwk : :class:`~skrf.network.Network` object
+            Network data of device measurement from which
+            parasitics needs to be removed via de-embedding
+
+        Returns
+        -------
+
+        caled : :class:`~skrf.network.Network` object
+            Network data of the device after de-embedding
         """
         # check if the frequencies match with dummy frequencies
         if ntwk.f != self.open.f:
@@ -565,7 +578,34 @@ class OpenOpenShortThru(Deembedding):
         else:
             caled, op, op_p, sh, thr = ntwk.copy(), self.open, self.open_pad, self.short, self.thru
 
-        # Deembedding-Algo here
+        # Subtract effect of input and output pads
+        caled.y = caled.y - op_p.y
+        op.y = op.y - op_p.y
+        sh.y = sh.y - op_p.y
+        thr.y = thr.y - op_p.y
+        
+        # Calculate input and output interconnects
+        InOut = thr.copy()
+        InOut.s[:,0,0] = (thr.s[:,0,0]+thr.s[:,1,1])/(2+thr.s[:,1,0]+thr.s[:,0,1])
+        InOut.s[:,0,1] = npy.sqrt(0.5*(thr.s[:,0,1]+thr.s[:,1,0])*(1-(thr.s[:,0,0]))*(1-(thr.s[:,0,0])))
+        InOut.s[:,1,0] = (thr.s[:,0,0]+thr.s[:,1,1])/(2+thr.s[:,1,0]+thr.s[:,0,1])
+        InOut.s[:,1,1] = npy.sqrt(0.5*(thr.s[:,0,1]+thr.s[:,1,0])*(1-(thr.s[:,0,0]))*(1-(thr.s[:,0,0])))
+
+        # Subtract effect of interconnects
+        caled.a = InOut.inv.a @ caled.a @ InOut.inv.a   
+        op.a = InOut.inv.a @ op.a @ InOut.inv.a
+        sh.a = InOut.inv.a @ sh.a @ InOut.inv.a
+
+        # Subtract effect of source dangling leg
+        caled.z = caled.z - sh.z
+        op.z = op.z - sh.z
+
+        # Remove coupling effect
+        caled.y = caled.y - op.y
+
+        return caled
+
+
 class SplitPi(Deembedding):
     """
     Remove shunt and series parasitics assuming pi-type embedding network.

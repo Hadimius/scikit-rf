@@ -536,16 +536,76 @@ class Short(Deembedding):
 
 class OpenOpenShortThru(Deembedding):
     """
-    Remove Parasitics. See Paper On the De-Embedding Issue of Millimeter-Wave
-    and Sub-Millimeter-Wave Measurement
-    and Circuit Design
+    This is an improved de-embedding method for high frequency de-embedding.
+    
+    A deembedding object is created with the dummy measurements `dummy_open`,
+    `dummy_open_pad`, `dummy_short` and `dummy_thru`. When :func:`Deembedding.deembed` is applied,
+    Open-Open-Short-Thru De-embedding to the device under test.
+    The open dummy structure is used to subtract the coupling effect between the source dangling leg
+    and the interconnect.
+    The short dummy structure is used to subtract the effect of source dangling leg.
+    The effect of substrate is subtracted by the open pad, short and thru dummy structure.
 
-    Suitable for higher frequencies where classic OpenShort Algorithms not feasible anymore.
-    MORE DETAILS FOLLOWING!
+    This de-embedding method is more accurate for very high frequency de-embedding compared to eg. OpenShort.
+
+    References
+    ------------
+
+    .. [5] B. Zhang, Y. -Z. Xiong, L. Wang, S. Hu and J. L. -W. Li, "On the De-Embedding Issue of Millimeter-Wave 
+        and Sub-Millimeter-Wave Measurement and Circuit Design," in IEEE Transactions on Components, 
+        Packaging and Manufacturing Technology, vol. 2, no. 8, pp. 1361-1369, Aug. 2012.
+
+    Example
+    --------
+    >>> import skrf as rf
+    >>> from skrf.calibration import OpenOpenShortThru
+
+    Create network objects for dummy structures and dut
+
+    >>> op = rf.Network('open_ckt.s2p')
+    >>> op_p = rf.Network('open_pad_ckt.s2p')
+    >>> sh = rf.Network('open_ckt.s2p')
+    >>> thr = rf.Network('thru_ckt.s2p')
+    >>> dut = rf.Network('full_ckt.s2p')
+
+    Create de-embedding object
+
+    >>> dm = OpenOpenShortThru(dummy_open = op, dummy_open_pad = op_p, dummy_short = sh, dummy_thru = thr, name = 'test_open')
+
+    Remove parasitics to get the actual device network
+
+    >>> realdut = dm.deembed(dut)
     """
+
     def __init__(self, dummy_open, dummy_open_pad, dummy_short, dummy_thru, name=None, *args, **kwargs):
         """
-        Initializer info
+        OpenOpenShortThru De-embedding Initializer
+
+        Parameters
+        -----------
+
+        dummy_open : :class:`~skrf.network.Network` object
+            Measurement of the dummy open structure
+
+        dummy_open_pad : :class:`~skrf.network.Network` object
+            Measurement of the dummy open pad structure
+
+        dummy_short : :class:`~skrf.network.Network` object
+            Measurement of the dummy short structure
+
+        dummy_thru : :class:`~skrf.network.Network` object
+            Measurement of the dummy thru structure
+
+        name : string
+            Optional name of de-embedding object
+
+        args, kwargs:
+            Passed to :func:`Deembedding.__init__`
+
+        See Also
+        ---------
+        :func:`Deembedding.__init__`
+
         """
         self.open = dummy_open.copy()
         self.open_pad = dummy_open_pad.copy()
